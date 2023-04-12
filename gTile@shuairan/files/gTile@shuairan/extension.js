@@ -39,6 +39,9 @@ function _(str) {
 const SETTINGS_AUTO_CLOSE = 'autoclose';
 const SETTINGS_ANIMATION = 'animation';
 
+const MARGIN_X = 30;
+const MARGIN_Y = 30;
+
 const TOOLTIPS = [];
 TOOLTIPS[SETTINGS_AUTO_CLOSE] = _("Auto close");
 TOOLTIPS[SETTINGS_ANIMATION] = _("Animations");
@@ -320,6 +323,24 @@ function move_maximize_window(metaWindow, x, y) {
 
   metaWindow.move_frame(true, x, y);
   metaWindow.maximize(Meta.MaximizeFlags.HORIZONTAL | Meta.MaximizeFlags.VERTICAL);
+}
+
+/**
+ * Resizes window considering margin settings
+ * @param metaWindow
+ * @param x
+ * @param y
+ * @param width
+ * @param height
+ */
+function move_resize_window_with_margins(metaWindow, x, y, width, height){
+    move_resize_window(
+        metaWindow,
+        x + MARGIN_X,
+        y + MARGIN_Y,
+        width - MARGIN_X * 2,
+        height - MARGIN_Y * 2
+    )
 }
 
 function move_resize_window(metaWindow, x, y, width, height) {
@@ -695,7 +716,7 @@ AutoTileMainAndList.prototype = {
     let [screenX, screenY, screenWidth, screenHeight] = getUsableScreenArea(monitor);
     let windows = getNotFocusedWindowsOfMonitor(monitor);
 
-    move_resize_window(focusMetaWindow, screenX, screenY, screenWidth / 2, screenHeight);
+    move_resize_window_with_margins(focusMetaWindow, screenX, screenY, screenWidth / 2, screenHeight);
 
     let winHeight = screenHeight / windows.length;
     let countWin = 0;
@@ -707,7 +728,7 @@ AutoTileMainAndList.prototype = {
 
       reset_window(metaWindow);
 
-      move_resize_window(metaWindow, screenX + screenWidth / 2, screenY + newOffset, screenWidth / 2, winHeight);
+      move_resize_window_with_margins(metaWindow, screenX + screenWidth / 2, screenY + newOffset, screenWidth / 2, winHeight);
       countWin++;
     }
 
@@ -749,7 +770,7 @@ AutoTileTwoList.prototype = {
     let xOffset = ((countWin % 2) * screenWidth) / 2;
     let yOffset = Math.floor(countWin / 2) * winHeight;
 
-    move_resize_window(focusMetaWindow, screenX + xOffset, screenY + yOffset, screenWidth / 2, winHeight);
+    move_resize_window_with_margins(focusMetaWindow, screenX + xOffset, screenY + yOffset, screenWidth / 2, winHeight);
 
     countWin++;
 
@@ -761,7 +782,7 @@ AutoTileTwoList.prototype = {
 
       reset_window(metaWindow);
 
-      move_resize_window(metaWindow, screenX + xOffset, screenY + yOffset, screenWidth / 2, winHeight);
+      move_resize_window_with_margins(metaWindow, screenX + xOffset, screenY + yOffset, screenWidth / 2, winHeight);
       countWin++;
     }
 
@@ -1259,7 +1280,7 @@ GridElementDelegate.prototype = {
       if (this._allSelected()) {
         move_maximize_window(focusMetaWindow, areaX, areaY);
       } else {
-        move_resize_window(focusMetaWindow, areaX, areaY, areaWidth, areaHeight);
+        move_resize_window_with_margins(focusMetaWindow, areaX, areaY, areaWidth, areaHeight);
       }
 
       this._resizeDone();

@@ -78,6 +78,9 @@ class GridSettingsButton {
 
 ;// CONCATENATED MODULE: ../base/config.ts
 
+const MARGIN_Y = 30;
+const MARGIN_X = 30;
+
 const Settings = imports.ui.settings;
 const Main = imports.ui.main;
 class Config {
@@ -139,6 +142,8 @@ class Config {
         this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, 'aspect-ratio', 'aspectRatio', this.UpdateGridTableSize, null);
         this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, 'useMonitorCenter', 'useMonitorCenter', () => this.app.OnCenteredToWindowChanged(), null);
         this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, 'showGridOnAllMonitors', 'showGridOnAllMonitors', () => this.app.ReInitialize(), null);
+        this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, 'window-margin', 'windowMargin', this.UpdateSettings, null)
+
         let basestr = 'grid';
         this.initGridSettings();
         for (let i = 1; i <= 4; i++) {
@@ -1486,6 +1491,31 @@ const move_maximize_window = (metaWindow, x, y) => {
     metaWindow.move_frame(true, x, y);
     metaWindow.maximize(utils_Meta.MaximizeFlags.HORIZONTAL | utils_Meta.MaximizeFlags.VERTICAL);
 };
+
+
+/**
+ * Resizes window considering margin settings
+ * @param metaWindow
+ * @param x
+ * @param y
+ * @param width
+ * @param height
+ */
+const move_resize_window_with_margins = (metaWindow, x, y, width, height) => {
+    move_resize_window(
+        // metaWindow,
+        // x + 10,
+        // y + 10,
+      // width - 20,
+      // height - 20
+      metaWindow,
+        x + app.config.windowMargin || 0,
+        y + app.config.windowMargin || 0,
+      width - ( app.config.windowMargin||0 ) * 2,
+      height - ( app.config.windowMargin ||0 )* 2
+    )
+}
+
 const move_resize_window = (metaWindow, x, y, width, height) => {
     if (!metaWindow)
         return;
@@ -1541,7 +1571,7 @@ let extension_metadata;
 let app;
 const platform = {
     move_maximize_window: move_maximize_window,
-    move_resize_window: move_resize_window,
+    move_resize_window: move_resize_window_with_margins,
     reset_window: reset_window,
     get_window_center: get_window_center,
     subscribe_to_focused_window_changes: subscribe_to_focused_window_changes,

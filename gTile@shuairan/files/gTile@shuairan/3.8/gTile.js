@@ -139,6 +139,7 @@ class Config {
         this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, 'aspect-ratio', 'aspectRatio', this.UpdateGridTableSize, null);
         this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, 'useMonitorCenter', 'useMonitorCenter', () => this.app.OnCenteredToWindowChanged(), null);
         this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, 'showGridOnAllMonitors', 'showGridOnAllMonitors', () => this.app.ReInitialize(), null);
+        this.settings.bindProperty(Settings.BindingDirection.BIDIRECTIONAL, 'window-margin', 'windowMargin', this.UpdateSettings, null)
         let basestr = 'grid';
         this.initGridSettings();
         for (let i = 1; i <= 4; i++) {
@@ -386,14 +387,14 @@ let AutoTileMainAndList = class AutoTileMainAndList extends ActionButton {
             let monitor = this.app.CurrentMonitor;
             let [screenX, screenY, screenWidth, screenHeight] = getUsableScreenArea(monitor);
             let windows = this.app.GetNotFocusedWindowsOfMonitor(monitor);
-            this.app.platform.move_resize_window(this.app.FocusMetaWindow, screenX, screenY, screenWidth / 2, screenHeight);
+            this.app.platform.move_resize_window_with_margins(this.app.FocusMetaWindow, screenX, screenY, screenWidth / 2, screenHeight);
             let winHeight = screenHeight / windows.length;
             let countWin = 0;
             for (let windowIdx in windows) {
                 let metaWindow = windows[windowIdx];
                 let newOffset = countWin * winHeight;
                 this.app.platform.reset_window(metaWindow);
-                this.app.platform.move_resize_window(metaWindow, screenX + screenWidth / 2, screenY + newOffset, screenWidth / 2, winHeight);
+                this.app.platform.move_resize_window_with_margins(metaWindow, screenX + screenWidth / 2, screenY + newOffset, screenWidth / 2, winHeight);
                 countWin++;
             }
             this.emit('resize-done');
@@ -434,14 +435,14 @@ let AutoTileTwoList = class AutoTileTwoList extends ActionButton {
             let countWin = 0;
             let xOffset = ((countWin % 2) * screenWidth) / 2;
             let yOffset = Math.floor(countWin / 2) * winHeight;
-            this.app.platform.move_resize_window(this.app.FocusMetaWindow, screenX + xOffset, screenY + yOffset, screenWidth / 2, winHeight);
+            this.app.platform.move_resize_window_with_margins(this.app.FocusMetaWindow, screenX + xOffset, screenY + yOffset, screenWidth / 2, winHeight);
             countWin++;
             for (let windowIdx in windows) {
                 let metaWindow = windows[windowIdx];
                 xOffset = ((countWin % 2) * screenWidth) / 2;
                 yOffset = Math.floor(countWin / 2) * winHeight;
                 this.app.platform.reset_window(metaWindow);
-                this.app.platform.move_resize_window(metaWindow, screenX + xOffset, screenY + yOffset, screenWidth / 2, winHeight);
+                this.app.platform.move_resize_window_with_margins(metaWindow, screenX + xOffset, screenY + yOffset, screenWidth / 2, winHeight);
                 countWin++;
             }
             this.emit('resize-done');
@@ -691,7 +692,7 @@ let GridElementDelegate = class GridElementDelegate {
                 this.app.platform.move_maximize_window(this.app.FocusMetaWindow, areaX, areaY);
             }
             else {
-                this.app.platform.move_resize_window(this.app.FocusMetaWindow, areaX, areaY, areaWidth, areaHeight);
+                this.app.platform.move_resize_window_with_margins(this.app.FocusMetaWindow, areaX, areaY, areaWidth, areaHeight);
             }
             this._resizeDone();
         }
@@ -1487,6 +1488,21 @@ const move_maximize_window = (metaWindow, x, y) => {
     metaWindow.move_frame(true, x, y);
     metaWindow.maximize(utils_Meta.MaximizeFlags.HORIZONTAL | utils_Meta.MaximizeFlags.VERTICAL);
 };
+
+const move_resize_window_with_margins = (metaWindow, x, y, width, height) => {
+    move_resize_window(
+        // metaWindow,
+        // x + 10,
+        // y + 10,
+      // width - 20,
+      // height - 20
+      metaWindow,
+        x + app.config.windowMargin || 0,
+        y + app.config.windowMargin || 0,
+      width - ( app.config.windowMargin||0 ) * 2,
+      height - ( app.config.windowMargin ||0 )* 2
+    )
+}
 const move_resize_window = (metaWindow, x, y, width, height) => {
     if (!metaWindow)
         return;
@@ -1538,7 +1554,7 @@ let extension_metadata;
 let app;
 const platform = {
     move_maximize_window: move_maximize_window,
-    move_resize_window: move_resize_window,
+    move_resize_window: move_resize_window_with_margins,
     reset_window: reset_window,
     get_window_center: get_window_center,
     subscribe_to_focused_window_changes: subscribe_to_focused_window_changes,
