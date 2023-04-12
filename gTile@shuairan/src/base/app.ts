@@ -51,7 +51,7 @@ export class App implements IApp {
       Main.uiGroup.add_actor(this.area);
       this.config = new Config(this);
       this.InitGrid();
-      this.tracker.connect("notify::focus-app", this.OnFocusedWindowChanged);
+      global.display.connect("notify::focus-window", this.OnFocusedWindowChanged);
       global.screen.connect('monitors-changed', this.ReInitialize);
   }
 
@@ -116,10 +116,6 @@ export class App implements IApp {
     const window = this.focusMetaWindow;
     if (window != null && wm_type !== 1 && layer > 0) {
         for (const grid of this.grids) {
-
-            if (!this.config.showGridOnAllMonitors)
-                grid.ChangeCurrentMonitor(this.monitors.find(x => x.index == window.get_monitor()) ?? Main.layoutManager.primaryMonitor);
-
             const [pos_x, pos_y] = (!this.config.useMonitorCenter && grid.monitor.index == this.currentMonitor.index) ?  this.platform.get_window_center(window) : GetMonitorCenter(grid.monitor);
 
             grid.Show(Math.floor(pos_x - grid.actor.width / 2), Math.floor(pos_y - grid.actor.height / 2));
@@ -282,11 +278,15 @@ export class App implements IApp {
 
     this.focusMetaWindow = window;
 
-    if (!this.config.showGridOnAllMonitors)
+    
+    if (!this.config.showGridOnAllMonitors) {
+      if (this.CurrentGrid) {
         this.CurrentGrid.ChangeCurrentMonitor(this.monitors[this.focusMetaWindow.get_monitor()]);
+      }
+    }
 
     this.currentMonitor = this.monitors[this.focusMetaWindow.get_monitor()];
-
+    
     this.focusMetaWindowPrivateConnections.push(
         ...this.platform.subscribe_to_focused_window_changes(this.focusMetaWindow, this.MoveUIActor)
     );

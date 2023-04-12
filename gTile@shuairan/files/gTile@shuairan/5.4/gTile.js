@@ -971,25 +971,19 @@ let Grid = class Grid {
             switch (type) {
                 case 'gTile-k-right':
                 case 'gTile-k-right-meta':
-                    this.colKey = Math.min(this.colKey + 1, this.cols.length - 1);
-                    this.rowKey = this.rowKey === -1 ? 0 : this.rowKey;
+                    ++this.colKey;
                     break;
                 case 'gTile-k-left':
                 case 'gTile-k-left-meta':
-                    if (this.colKey == -1)
-                        return;
-                    this.colKey = Math.max(0, this.colKey - 1);
+                    --this.colKey;
                     break;
                 case 'gTile-k-up':
                 case 'gTile-k-up-meta':
-                    if (this.rowKey == -1)
-                        return;
-                    this.rowKey = Math.max(0, this.rowKey - 1);
+                    --this.rowKey;
                     break;
                 case 'gTile-k-down':
                 case 'gTile-k-down-meta':
-                    this.rowKey = Math.min(this.rowKey + 1, this.rows.length - 1);
-                    this.colKey = this.colKey === -1 ? 0 : this.colKey;
+                    ++this.rowKey;
                     break;
                 case 'gTile-k-left-monitor-move':
                     this.MoveToMonitor(getAdjacentMonitor(this.monitor, Side.LEFT));
@@ -1016,9 +1010,22 @@ let Grid = class Grid {
                     (_h = (_g = this.app.config.gridSettingsButton) === null || _g === void 0 ? void 0 : _g[3]) === null || _h === void 0 ? void 0 : _h._onButtonPress();
                     break;
             }
+            this.ClampColRowKeys();
+            this.DrawSelectionBoxes();
+            if (this.app.CurrentGrid !== this) {
+                this.app.CurrentGrid.ClampColRowKeys();
+                this.app.CurrentGrid.DrawSelectionBoxes();
+            }
+        };
+        this.ClampColRowKeys = () => {
+            this.colKey = Math.min(Math.max(0, this.colKey), this.cols.length - 1);
+            this.rowKey = Math.min(Math.max(0, this.rowKey), this.rows.length - 1);
+        };
+        this.DrawSelectionBoxes = () => {
             this.keyElement = this.elements[this.rowKey] ? this.elements[this.rowKey][this.colKey] : null;
-            if (this.keyElement)
+            if (this.keyElement) {
                 this.keyElement._onHoverChanged();
+            }
         };
         this.BeginTiling = () => {
             if (this.keyElement) {
@@ -1265,7 +1272,6 @@ class App {
             this.MoveUIActor();
         };
         this.ShowUI = () => {
-            var _a;
             this.focusMetaWindow = getFocusApp();
             let wm_type = this.focusMetaWindow.get_window_type();
             let layer = this.focusMetaWindow.get_layer();
@@ -1273,8 +1279,6 @@ class App {
             const window = this.focusMetaWindow;
             if (window != null && wm_type !== 1 && layer > 0) {
                 for (const grid of this.grids) {
-                    if (!this.config.showGridOnAllMonitors)
-                        grid.ChangeCurrentMonitor((_a = this.monitors.find(x => x.index == window.get_monitor())) !== null && _a !== void 0 ? _a : app_Main.layoutManager.primaryMonitor);
                     const [pos_x, pos_y] = (!this.config.useMonitorCenter && grid.monitor.index == this.currentMonitor.index) ? this.platform.get_window_center(window) : GetMonitorCenter(grid.monitor);
                     grid.Show(Math.floor(pos_x - grid.actor.width / 2), Math.floor(pos_y - grid.actor.height / 2));
                     this.OnFocusedWindowChanged();
@@ -1380,8 +1384,11 @@ class App {
             }
             this.ResetFocusedWindow();
             this.focusMetaWindow = window;
-            if (!this.config.showGridOnAllMonitors)
-                this.CurrentGrid.ChangeCurrentMonitor(this.monitors[this.focusMetaWindow.get_monitor()]);
+            if (!this.config.showGridOnAllMonitors) {
+                if (this.CurrentGrid) {
+                    this.CurrentGrid.ChangeCurrentMonitor(this.monitors[this.focusMetaWindow.get_monitor()]);
+                }
+            }
             this.currentMonitor = this.monitors[this.focusMetaWindow.get_monitor()];
             this.focusMetaWindowPrivateConnections.push(...this.platform.subscribe_to_focused_window_changes(this.focusMetaWindow, this.MoveUIActor));
             let app = this.tracker.get_window_app(this.focusMetaWindow);
@@ -1419,7 +1426,7 @@ class App {
         app_Main.uiGroup.add_actor(this.area);
         this.config = new Config(this);
         this.InitGrid();
-        this.tracker.connect("notify::focus-app", this.OnFocusedWindowChanged);
+        global.display.connect("notify::focus-window", this.OnFocusedWindowChanged);
         global.screen.connect('monitors-changed', this.ReInitialize);
     }
     get CurrentMonitor() {
@@ -1483,6 +1490,10 @@ const move_resize_window = (metaWindow, x, y, width, height) => {
     if (!metaWindow)
         return;
     metaWindow.move_resize_frame(true, x, y, width, height);
+    const frameRect = metaWindow.get_frame_rect();
+    const offsetX = (width - frameRect.width) / 2;
+    const offsetY = (height - frameRect.height) / 2;
+    metaWindow.move_frame(true, x + offsetX, y + offsetY);
 };
 const get_window_center = (window) => {
     const pos_x = window.get_frame_rect().width / 2 + window.get_frame_rect().x;

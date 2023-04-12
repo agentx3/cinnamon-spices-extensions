@@ -462,27 +462,19 @@ export class Grid {
     switch (type) {
       case 'gTile-k-right':
       case 'gTile-k-right-meta':
-        this.colKey = Math.min(this.colKey + 1, this.cols.length - 1);
-        this.rowKey = this.rowKey === -1 ? 0 : this.rowKey; //leave initial state
+        ++this.colKey;
         break;
       case 'gTile-k-left':
       case 'gTile-k-left-meta':
-        // Nothing is selected yet and trying to got further left, abort
-        if (this.colKey == -1)
-          return;
-        this.colKey = Math.max(0, this.colKey - 1);
+        --this.colKey;
         break;
       case 'gTile-k-up':
       case 'gTile-k-up-meta':
-        // Nothing is selected yet and trying to got further up, abort
-        if (this.rowKey == -1)
-          return;
-        this.rowKey = Math.max(0, this.rowKey - 1);
+        --this.rowKey;
         break;
       case 'gTile-k-down':
       case 'gTile-k-down-meta':
-        this.rowKey = Math.min(this.rowKey + 1, this.rows.length - 1);
-        this.colKey = this.colKey === -1 ? 0 : this.colKey; //leave initial state
+        ++this.rowKey;
         break;
       case 'gTile-k-left-monitor-move':
         this.MoveToMonitor(getAdjacentMonitor(this.monitor, Side.LEFT));
@@ -510,9 +502,25 @@ export class Grid {
         break;
     }
 
+    this.ClampColRowKeys();
+    this.DrawSelectionBoxes();
+
+    if (this.app.CurrentGrid !== this) {
+      this.app.CurrentGrid.ClampColRowKeys();
+      this.app.CurrentGrid.DrawSelectionBoxes();
+    }
+  }
+
+  private ClampColRowKeys = () => {
+    this.colKey = Math.min(Math.max(0, this.colKey), this.cols.length - 1);
+    this.rowKey = Math.min(Math.max(0, this.rowKey), this.rows.length - 1);
+  }
+
+  private DrawSelectionBoxes = () => {
     this.keyElement = this.elements[this.rowKey] ? this.elements[this.rowKey][this.colKey] : null;
-    if (this.keyElement)
+    if (this.keyElement) {
       this.keyElement._onHoverChanged();
+    }
   }
 
   //#endregion
